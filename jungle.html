@@ -1,0 +1,520 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<title>JUNGLE</title>
+		<style type="text/css">
+
+			#gameArea{
+				text-align:center;
+				margin-left:300px;
+				margin-top:50px;
+				width:710px;
+				height:510px;
+			}
+			#menu{
+				height:510px;
+				width:400px;
+			}
+			#panel{
+				height:500px;
+				width:300px;
+				float:right;
+
+			}
+			#timer{
+				height:100px;
+				filter:alpha(opacity=100 finishopacity=0 style=1 startx=0,starty=5,finishx=90,finishy=60);
+				background:-webkit-gradient(linear, left top, left bottom, from(#00abeb), to(#fff));
+			}
+			#players{
+				height:240px;
+			}
+			#computer{
+				height:240px;
+				width:150px;
+				float:left;
+				background-color:#FFAEB9;
+				background:-webkit-gradient(linear, left top, left bottom, from(#FFAEB9), to(#fff));
+			}
+			#player{
+				height:240px;
+				width:150px;
+				float:right;
+				background:-webkit-gradient(linear, left top, left bottom, from(#00FF5F), to(#fff));
+
+			}
+			#explain{
+				height:150px;
+				width:300px;
+				font-size:15pt;
+				background:-webkit-gradient(linear, left top, left bottom, from(#EEEE00), to(#fff));
+
+			}
+			
+			#playboard{
+				border:2px solid;
+				width:400px;
+				height:510px;
+			}
+			
+			#playermark,#computermark{
+				margin:10px;
+				color:red;
+				font-size:100pt;
+				height:150px;
+				width:130px;
+			}
+			td{
+				border:2px solid;
+				width:50px;
+				height:50px;
+				margin:0 auto;
+				padding:0;
+				overflow:hidden;
+				font-size:0;
+			}
+			.companion{
+				background-color:green;
+			}
+			.enemy{
+				background-color:red;
+			}
+			.river{
+				background:url("./img/river.png") no-repeat;
+				background-size:100%,100%;
+				
+			}
+			.trap{
+				background:url("./img/trap.png") no-repeat;
+				background-size:100%,100%;
+			}
+			.den{
+				background:url("./img/den.png") no-repeat;
+				background-size:100%,100%;
+				
+			}
+			.enemy{
+				-webkit-transform: rotateX(180deg); /* for chrome and safari */
+				overflow-x:hidden;
+			}
+			img{
+				width:50px;
+				height:50px;
+				display:block;
+				vertical-align:bottom;
+			}
+			.header{
+				top:0px;
+				left:0px;
+				text-align:left;
+				margin:5px;
+				padding:5px;
+				margin-bottom:0px;
+			}
+			.header,.footer{
+				font-family:"Comic Sans","Verdana";
+			}
+			.footer:hover{
+				font-size:15pt;
+				
+			}
+			#explain_content{
+				height:120px;
+				margin:5px;
+				text-align:left;
+			}
+			#timer>.footer{
+				bottom:0px;
+				right:0px;
+				text-align:right;
+				
+			}
+			#thetime{
+				height:40px;
+				text-align:center;
+				color:red;
+				font-size:27px;
+				
+			}
+			
+		</style>
+		<script type = "text/javascript">
+			var minute = 0;//for timer
+			var second = 0;//for timer
+			var timer1,timer2;
+			var turn = "companion";
+			var animalLayout = [
+				[2,6,"a","elephant"],
+				[0,0,"b","lion"],
+				[0,6,"c","tiger"],
+				[2,2,"d","leopard"],
+				[2,4,"e","wolf"],
+				[1,1,"f","dog"],
+				[1,5,"g","cat"],
+				[2,0,"h","rat"],
+			]//animal position, id and title
+			var theTable,tableContent;//the playboard table 
+			var areaCompanion = 80;//variable to locate companion and enemy
+			var areaEnemy = 10;//variable to locate companion and enemy
+			var area = areaCompanion;//variable to locate companion and enemy
+			function init(){//game starts
+				minute = 0;
+				second = -1;
+				var nofR,nofC;
+				nofR = 9;//number of rows
+				nofC = 7;//number of columns
+				theTable = document.getElementById("playboard");
+				theTable.innerHTML = "";
+				tableContent = new Array(nofR);
+				for(var i=0;i<nofR;i++){//start creating table 
+					tableContent[i] = new Array(nofC);
+					var newRow = theTable.insertRow(-1);//insert rows
+					for(var j=0;j<nofC;j++){
+						tableContent[i][j]=newRow.insertCell(j);//insert cells in the row
+						tableContent[i][j].className = "blank";
+						tableContent[i][j].id = i+""+j;//id of the td is ij(i*10+j)
+						tableContent[i][j].setAttribute("onclick","explain(this)");//onclick event to get explanation
+						tableContent[i][j].setAttribute("ondrop","drop(event)");//on drop event
+						tableContent[i][j].setAttribute("ondragover","allowDrop(event)");//ondragover event
+						if((i==3||i==4|i==5)&&(j==1||j==2||j==4||j==5)){
+								tableContent[i][j].className = "river";//assign classname of rivers
+						}
+						if((i==0||i==8)&&(j==3)){
+							tableContent[i][j].className = "den";//assign classname of den
+						}
+						if(((i==0||i==8)&&(j==2||j==4))||(i==1&&j==3)||(i==7&&j==3)){
+							tableContent[i][j].className = "trap";//assign classname of trap
+						}
+					}
+				}
+				for(var i=0;i<8;i++){//load the img of animals, with id [a-h][e/c](e for enemy, c for companion), set them draggable
+					tableContent[animalLayout[i][0]][animalLayout[i][1]].innerHTML = "<img id = '"+animalLayout[i][2]+"e' class='enemy' src = './img/"+animalLayout[i][2]+".png' title='"+animalLayout[i][3]+"' draggable ='true' ondragstart = 'drag(event)'>";
+					tableContent[nofR-animalLayout[i][0]-1][nofC-animalLayout[i][1]-1].innerHTML = "<img id = '"+animalLayout[i][2]+"c' class='companion' src = './img/"+animalLayout[i][2]+".png' title='"+animalLayout[i][3]+"' draggable ='true' ondragstart = 'drag(event)'>";
+				}
+				
+				disabledrag();
+				timer1 = setInterval("ai()",1);
+				timer2 = setInterval("timer()",1000);
+			}
+			
+			function timer(){
+				second++;
+				if(second>59){
+					second=0;
+					minute++;
+				}
+				document.getElementById("thetime").innerHTML = minute+" minutes "+second+" seconds ";
+			}
+			
+			function ai(){// AI implementation
+				if(window.turn!="enemy"){// only manipulate "enemy"
+					return;
+				}
+				var enemylist = document.getElementsByClassName("enemy");//get all enemies
+				while(true){//get the required parameter by processdrop();
+					var index = Math.floor(Math.random()*enemylist.length);
+					var item = enemylist[index];
+					var data = item.id;
+					var itemParent = item.parentNode;
+					index = Math.floor(Math.random()*4);
+					var offset;
+					switch(index){
+						case 0:
+							offset = 1;
+							break;
+						case 1:
+							offset = -1;
+							break;
+						case 2:
+							offset = 10;
+							break;
+						case 3:
+							offset = -10;
+							break;
+					}// randomly generate an offset to decide the dest location
+					var destid = offset + parseInt(itemParent.id);
+					var dest = document.getElementById(destid);
+					if(dest!=undefined&&dest.childNodes[0]!=undefined)
+						dest = dest.childNodes[0];
+					if(dest==undefined){
+						continue;
+					}
+					else{
+						break;
+					}
+				}		
+				processdrop(data,item,itemParent,destid,dest);
+			}
+			
+			function allowDrop(ev) {
+				ev.preventDefault();
+			}
+
+			function drag(ev) {//pass the img id into a text stream
+				if(turn!=ev.target.className){
+					error(6);
+					return;
+				}
+				ev.dataTransfer.setData("Text", ev.target.id);
+				if(ev.target.className == "enemy")
+					area = areaEnemy;
+				else 
+					area = areaCompanion;
+			}
+		
+			function drop(ev) {//get required parameters and call processdrop();
+				ev.preventDefault();
+				var data=ev.dataTransfer.getData("Text");//read the img id out from the text stream
+				var item = document.getElementById(data);//get the dragged element
+				var itemParent = item.parentNode;//get the original<td>
+				var dest = document.getElementById(ev.target.id);//get the target <td>
+				var destid = dest.id;
+				if(isNaN(dest.id))
+					destid = dest.parentNode.id;
+
+				processdrop(data,item,itemParent,destid,dest);
+			}
+			
+			function processdrop(data,item,itemParent,destid,dest){
+				if(!(Math.abs(itemParent.id-destid)==1||Math.abs(itemParent.id-destid)==10)){//move to adjacent <td>
+					var jumpOver = jumpOverRiver(item,itemParent,destid);
+					if(!jumpOver){
+						error(0);
+						return;
+					}
+				}
+				if(((dest.className=="blank"||dest.className=="river"||dest.className=="trap"||dest.className=="den")&&dest.childNodes[0]==undefined)||(dest.tag=="td"&&dest.childNodes[0].className!="enemy"&&dest.childNodes[0].className!="companion")){//the dest can be trap, den or river;
+					if(dest.className=="den"){//move to a den
+						if(Math.abs(dest.id-area)<10){
+							error(2);
+							return;
+						}
+						else{
+							if(window.turn == "companion")
+								alert("you win!");
+							else
+								alert("you lose!");
+							stop();
+						}
+					}
+					//move to river
+					if(dest.className == "river"&&item.title!="rat"){
+						error(3);
+						return;
+					}
+					dest.appendChild(item);
+				}
+				else{//the dest can be an enemy or companion
+					if(dest.className == item.className){//companion
+						error(1);
+						return;
+					}
+					else if(dest.childNodes[0]!=undefined){//another case of companion
+					//this is to prevent drop the <img> outside of target<img> but inside target<td>
+							if(dest.childNodes[0].className == item.className)
+								error(1);
+								return
+					}
+					else{//enemy
+						var destAnimal;
+						//get the dest animal element
+						if(dest.childNodes[0]==undefined)
+							destAnimal = dest;
+						else
+							destAnimal = dest.childNodes[0];
+						
+						if(destAnimal.parentNode.className == "trap"&&Math.abs(destid-area)<10){//in trap, anyone can eat
+							var destParent = destAnimal.parentNode;
+							destParent.removeChild(destAnimal);
+							destParent.appendChild(item);
+							eaten(destAnimal);
+						}
+						else{
+							if((destAnimal.title=="elephant"||destAnimal.title=="rat")&&item.title=="rat"){//rat eat elephant or another rat in any case
+								var destParent = destAnimal.parentNode;
+								destParent.removeChild(destAnimal);
+								destParent.appendChild(item);
+								eaten(destAnimal);
+							}
+							else{
+								if(destAnimal.id.charAt(0)>item.id.charAt(0)){//smaller id item will eat larger id destAnimal except that elephant cannot eat rat
+										if(destAnimal.title=="rat"&&item.title=="elephant"){
+											error(4);
+											return;
+										}
+										if(destAnimal.parentNode.className == "river"){
+											error(3);
+											return;
+										}
+										var destParent = destAnimal.parentNode;
+										destParent.removeChild(destAnimal);
+										destParent.appendChild(item);
+										eaten(destAnimal);
+								}
+								else{
+									error(5);
+									return;
+								}
+							}
+						}
+					}	
+				}	
+				switchturn();
+			}
+			
+			function jumpOverRiver(item,itemParent,destid){//judge whether an <img> can jump over river
+				if(item.title!="lion"&&item.title!="tiger")
+					return false;
+				if(Math.abs(itemParent.id-destid)==3){//jump over river horizontally
+					var theBigger = Math.max(itemParent.id,destid);
+					for(i=1;i<3;i++){
+						var judgeRiver = document.getElementById(theBigger-i);
+						if(judgeRiver.class == "river"||judgeRiver.childNodes[0]==undefined)
+							continue;
+						else{
+							error(7);
+							return false;
+						}
+					}
+					return true;
+				}
+				else if(Math.abs(itemParent.id-destid)==40){//jump over river vertically
+					var theBigger = Math.max(itemParent.id,destid);
+					for(i=1,j=10;i<4;i++,j=j+10){
+						var judgeRiver = document.getElementById(theBigger-j);
+						if(judgeRiver.class == "river"||judgeRiver.childNodes[0]==undefined)
+							continue;
+						else{
+							error(7);
+							return false;
+						}
+					}
+					return true;
+				}
+				else{
+					return false;
+				}
+				
+			}
+			
+			function eaten(destAnimal){//if eaten, the number in right side panel will change
+				if(destAnimal.className == "enemy"){
+					document.getElementById("computermark").innerHTML = (parseInt(document.getElementById("computermark").innerHTML)-1);
+				}
+				else{
+					document.getElementById("playermark").innerHTML = (parseInt(document.getElementById("playermark").innerHTML)-1);	
+				}
+			}
+			
+			function switchturn(){//when one valid operation is finished, it's turn for another player
+				if(window.turn == "enemy"){
+					window.turn = "companion";
+				}
+				else{
+					window.turn = "enemy";
+				}
+				disabledrag();
+			}
+			
+			function disabledrag(){// no longer draggable for the player not in turn
+				var enemylist = document.getElementsByClassName("enemy");
+				var companionlist = document.getElementsByClassName("companion");
+				if(window.turn == "enemy"){
+					for(var i=0;i<enemylist.length;i++){
+						enemylist[i].setAttribute("draggable","true");
+					}
+					for(var j=0;j<companionlist.length;j++){
+						companionlist[j].setAttribute("draggable","false");
+					}
+				}
+				else{
+					for(var i=0;i<enemylist.length;i++){
+						enemylist[i].setAttribute("draggable","false");
+					}
+					for(var j=0;j<companionlist.length;j++){
+						companionlist[j].setAttribute("draggable","true");
+					}
+				}
+			}
+			
+			function error(errsig){//show user invalid operation msg
+				var errmsg;
+				switch(errsig){
+					case 0:
+						errmsg="too far away, please only move 1 step";
+					break;
+					case 1:
+						errmsg="companion, can't move";
+					break;
+					case 2:
+						errmsg="can't move to the den of yourself";
+					break;
+					case 3:
+						errmsg="animals can't move into river except rats";
+					break;
+					case 4:
+						errmsg="elephant can't eat rats";
+					break;
+					case 5:
+						errmsg="animals can only eat who are weaker";
+					break;
+					case 6:
+						errmsg="That's not your animal";
+					break;
+					case 7:
+						errmsg="Lion and Tiger can only jump over river from either side when there is no rats in between";
+					break;
+				}
+				if(window.turn=="companion")
+					document.getElementById("explain_content").innerHTML=errmsg;
+			}
+			
+			function explain(e){//explain the icon when they are clicked
+				switch(e.className){
+					case "den":
+						document.getElementById("explain_content").innerHTML = "den<br> put any animal here to win the game";
+					break;
+					case "trap":
+						document.getElementById("explain_content").innerHTML = "trap<br>animal inside can be eaten by anybody";
+					break;
+					case "river":
+						document.getElementById("explain_content").innerHTML = "river<br>lion and tiger can jump over river if there are no rat in the way<br>only rat can get into river"
+					break;
+				}
+			}
+					
+			function stop(){
+				clearInterval(timer1);
+				clearInterval(timer2);
+				document.getElementById("playboard").innerHTML = "<div id = 'menu'><h2 onclick = 'init()'>start game</h2></div>";
+
+			}
+			
+		</script>
+	</head>
+	<body onload = "stop()" onselectstart = "return false">
+			<div id = "gameArea">
+				<table id = "playboard"/>
+				<div id = "panel">
+					<div id = "timer">
+						<div class="header">[You have spent]</div>
+						<div id = "thetime"></div>
+						<div class = "footer" onclick = "stop()">stop it!! by clicking here</div>
+					</div>
+					<div id = "players">
+						<div id = "player"><div class="header">[dear player]</div><div id = "playermark">8</div><div class = "footer">animals left</div></div>
+						<div id = "computer"><div class="header">[evil computer]</div><div id = "computermark">8</div><div class = "footer">animals left</div></div>
+					</div>
+					<div id = "explain">
+						<div class="header">
+							[warm reminder]
+						</div>
+						<div id="explain_content" class="content">
+							move your animal to your enemy's den and win
+						</div>
+					</div>
+				</div>
+			</div>
+	</body>
+</html>
